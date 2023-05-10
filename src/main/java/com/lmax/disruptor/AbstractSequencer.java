@@ -30,9 +30,21 @@ public abstract class AbstractSequencer implements Sequencer
     private static final AtomicReferenceFieldUpdater<AbstractSequencer, Sequence[]> SEQUENCE_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(AbstractSequencer.class, Sequence[].class, "gatingSequences");
 
+    /**
+     * ringBuffer 有效缓存区大小
+     */
     protected final int bufferSize;
+    /**
+     * 等待策略
+     */
     protected final WaitStrategy waitStrategy;
+    /**
+     * cursor 生产者当前指针下标
+     */
     protected final Sequence cursor = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+    /**
+     * 多个消费者的消费指针下标。
+     */
     protected volatile Sequence[] gatingSequences = new Sequence[0];
 
     /**
@@ -40,6 +52,8 @@ public abstract class AbstractSequencer implements Sequencer
      *
      * @param bufferSize   The total number of entries, must be a positive power of 2.
      * @param waitStrategy The wait strategy used by this sequencer
+     *
+     * 使用指定的缓冲区大小和等待策略创建
      */
     public AbstractSequencer(final int bufferSize, final WaitStrategy waitStrategy)
     {
@@ -76,6 +90,8 @@ public abstract class AbstractSequencer implements Sequencer
 
     /**
      * @see Sequencer#addGatingSequences(Sequence...)
+     *
+     * 添加消费者下标
      */
     @Override
     public final void addGatingSequences(final Sequence... gatingSequences)
@@ -103,6 +119,8 @@ public abstract class AbstractSequencer implements Sequencer
 
     /**
      * @see Sequencer#newBarrier(Sequence...)
+     *
+     * 为这些消费者创建一个屏障，用于协调它们和生产者之间的进度
      */
     @Override
     public SequenceBarrier newBarrier(final Sequence... sequencesToTrack)

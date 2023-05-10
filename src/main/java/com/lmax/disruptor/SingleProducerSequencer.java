@@ -48,8 +48,14 @@ abstract class SingleProducerSequencerFields extends SingleProducerSequencerPad
 
     /**
      * Set to -1 as sequence starting point
+     *
+     * 预分配后下标，表示从cursor～cursor+requiredCapacity 这段空间被分配后的下标
      */
     long nextValue = Sequence.INITIAL_VALUE;
+
+    /**
+     * 网关序列gatingSequences的最小序号缓存
+     */
     long cachedValue = Sequence.INITIAL_VALUE;
 }
 
@@ -85,6 +91,8 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
 
     /**
      * @see Sequencer#hasAvailableCapacity(int)
+     *
+     * 判断是否含有足够容量
      */
     @Override
     public boolean hasAvailableCapacity(final int requiredCapacity)
@@ -96,6 +104,8 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
     {
         long nextValue = this.nextValue;
 
+        // 可能构成环路的点：环形缓冲区可能追尾的点 = 等于本次申请的序号-环形缓冲区大小
+        // 如果该序号大于最慢消费者的进度，那么表示追尾了，需要等待
         long wrapPoint = (nextValue + requiredCapacity) - bufferSize;
         long cachedGatingSequence = this.cachedValue;
 
@@ -105,7 +115,7 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
             {
                 cursor.setVolatile(nextValue);  // StoreLoad fence
             }
-
+            // 找到gatingSequences最小序号并 和 nextValue 比较，返回较小值
             long minSequence = Util.getMinimumSequence(gatingSequences, nextValue);
             this.cachedValue = minSequence;
 
@@ -223,6 +233,7 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
     public void publish(final long sequence)
     {
         cursor.set(sequence);
+        // 通知消费者
         waitStrategy.signalAllWhenBlocking();
     }
 
