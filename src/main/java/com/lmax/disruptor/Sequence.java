@@ -4,6 +4,9 @@ package com.lmax.disruptor;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+/**
+ * 左填充符
+ */
 class LhsPadding
 {
     protected byte
@@ -15,12 +18,17 @@ class LhsPadding
         p60, p61, p62, p63, p64, p65, p66, p67,
         p70, p71, p72, p73, p74, p75, p76, p77;
 }
-
+/**
+ * 值
+ */
 class Value extends LhsPadding
 {
     protected long value;
 }
 
+/**
+ * 右填充符
+ */
 class RhsPadding extends Value
 {
     protected byte
@@ -40,10 +48,17 @@ class RhsPadding extends Value
  *
  * <p>Also attempts to be more efficient with regards to false
  * sharing by adding padding around the volatile field.
+ *
+ * 用于跟踪环形缓冲区和事件处理器进度的并发序列类。支持多种并发操作，包括 CAS 和订单写入。可以理解为进度序号跟踪器
+ * 同时增加padding解决伪共享问题
  */
 public class Sequence extends RhsPadding
 {
     static final long INITIAL_VALUE = -1L;
+
+    /**
+     * value对这些的变量句柄，用于操作value变量。如CAS，内存屏障
+     */
     private static final VarHandle VALUE_FIELD;
 
     static
@@ -81,6 +96,8 @@ public class Sequence extends RhsPadding
     /**
      * Perform a volatile read of this sequence's value.
      *
+     * volatile 读
+     *
      * @return The current value of the sequence.
      */
     public long get()
@@ -95,6 +112,7 @@ public class Sequence extends RhsPadding
      * a Store/Store barrier between this write and any previous
      * store.
      *
+     * 保证有序性 写
      * @param value The new value for the sequence.
      */
     public void set(final long value)
@@ -109,6 +127,7 @@ public class Sequence extends RhsPadding
      * write and a Store/Load barrier between this write and any
      * subsequent volatile read.
      *
+     * volatile 写
      * @param value The new value for the sequence.
      */
     public void setVolatile(final long value)
@@ -124,6 +143,8 @@ public class Sequence extends RhsPadding
      * @param expectedValue The expected current value.
      * @param newValue      The value to update to.
      * @return true if the operation succeeds, false otherwise.
+     *
+     * CAS
      */
     public boolean compareAndSet(final long expectedValue, final long newValue)
     {
@@ -145,6 +166,8 @@ public class Sequence extends RhsPadding
      *
      * @param increment The value to add to the sequence.
      * @return The value after the increment.
+     *
+     * 原子性 增加。返回增加后结果
      */
     public long addAndGet(final long increment)
     {
@@ -156,6 +179,8 @@ public class Sequence extends RhsPadding
      *
      * @param increment The value to add to the sequence.
      * @return the value before increment
+     *
+     * 原子性 增加。返回增加前结果
      */
     public long getAndAdd(final long increment)
     {
